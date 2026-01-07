@@ -3,144 +3,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Балда</title>
-    
+    <title>Балда ВК</title>
     <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
-    
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
     <style>
-        :root { --blue: #0077FF; --bg: #EBEDF0; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { margin: 0; background: var(--bg); font-family: -apple-system, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        #app { width: 100%; max-width: 500px; background: #fff; height: 100vh; display: flex; flex-direction: column; margin: 0 auto; }
+        :root { --blue: #0077ff; --white: #ffffff; --gray: #f2f3f5; }
+        body { margin: 0; background: #ebedf0; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        #app { width: 100%; max-width: 500px; background: var(--white); height: 100vh; display: flex; flex-direction: column; margin: 0 auto; position: relative; }
         
-        /* Компактный интерфейс по твоему наброску */
-        .header { display: flex; justify-content: space-around; padding: 5px; background: #fff; border-bottom: 1px solid #e7e8ec; }
-        .p-card { flex: 1; margin: 4px; padding: 8px; border: 2px solid #f0f2f5; border-radius: 12px; text-align: center; }
-        .p-card.active { border-color: var(--blue); background: #f5faff; }
-        .score { font-size: 24px; font-weight: bold; display: block; color: #000; }
-        .p-name { font-size: 11px; color: #818c99; font-weight: 600; text-transform: uppercase; }
+        /* Шапка с игроками */
+        .header { display: flex; justify-content: space-around; padding: 10px; border-bottom: 1px solid #ddd; }
+        .player { flex: 1; text-align: center; padding: 10px; border: 2px solid transparent; border-radius: 12px; transition: 0.3s; }
+        .player.active { border-color: var(--blue); background: #f0f7ff; }
+        .p-name { font-size: 12px; font-weight: bold; color: #818c99; display: block; }
+        .p-score { font-size: 28px; font-weight: bold; }
 
-        #grid-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 10px; background: #fff; }
-        #grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; width: 100%; max-width: 320px; }
-        .cell { aspect-ratio: 1; border: 1px solid #dce1e6; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; background: #fff; box-shadow: inset 0 -2px 0 #f0f2f5; }
-        .cell.active-cell { border: 2px solid var(--blue); background: #e1f0ff; }
-        .cell.selected { background: var(--blue) !important; color: #fff !important; border-color: var(--blue); }
+        /* Игровое поле */
+        #game-area { flex: 1; display: flex; align-items: center; justify-content: center; padding: 15px; }
+        #grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; width: 100%; max-width: 320px; }
+        .cell { aspect-ratio: 1; border: 1px solid #ccc; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; background: var(--white); box-shadow: 0 1px 0 #ccc; }
+        .cell.new { border: 2px solid var(--blue); background: #e1f0ff; }
+        .cell.selected { background: var(--blue) !important; color: var(--white) !important; }
 
-        .kb { display: grid; grid-template-columns: repeat(11, 1fr); gap: 3px; padding: 6px; background: #f2f3f5; }
-        .key { padding: 12px 0; background: #fff; border-radius: 5px; text-align: center; font-size: 13px; font-weight: bold; box-shadow: 0 1px 2px rgba(0,0,0,0.1); cursor: pointer; }
-        
-        .footer { padding: 10px; background: #fff; border-top: 1px solid #e7e8ec; text-align: center; }
-        #word-info { font-size: 16px; font-weight: bold; color: var(--blue); margin-bottom: 8px; height: 20px; }
-        .btns { display: flex; gap: 8px; }
-        button { flex: 1; height: 44px; border: none; border-radius: 10px; color: #fff; font-weight: bold; font-size: 15px; }
+        /* Клавиатура */
+        .keyboard { display: grid; grid-template-columns: repeat(11, 1fr); gap: 2px; padding: 5px; background: var(--gray); }
+        .key { padding: 12px 0; background: var(--white); border-radius: 4px; text-align: center; font-size: 13px; font-weight: bold; box-shadow: 0 1px 0 #bbb; }
+
+        /* Кнопки */
+        .controls { padding: 15px; text-align: center; border-top: 1px solid #eee; }
+        #current-word { font-size: 20px; font-weight: bold; color: var(--blue); margin-bottom: 10px; height: 24px; }
+        .btn-row { display: flex; gap: 10px; }
+        button { flex: 1; height: 48px; border: none; border-radius: 10px; color: var(--white); font-weight: bold; font-size: 16px; }
     </style>
 </head>
 <body>
 
 <div id="app">
     <div class="header">
-        <div id="p1-card" class="p-card active"><span class="p-name" id="p1-n">Игрок 1</span><span id="p1-s" class="score">0</span></div>
-        <div id="p2-card" class="p-card"><span class="p-name" id="p2-n">Игрок 2</span><span id="p2-s" class="score">0</span></div>
+        <div id="p0" class="player active"><span class="p-name" id="n0">ИГРОК 1</span><span id="s0" class="p-score">0</span></div>
+        <div id="p1" class="player"><span class="p-name" id="n1">ИГРОК 2</span><span id="s1" class="p-score">0</span></div>
     </div>
 
-    <div id="grid-container"><div id="grid"></div></div>
+    <div id="game-area"><div id="grid"></div></div>
 
-    <div class="footer">
-        <div id="word-info">---</div>
-        <div class="btns">
-            <button id="btn-ok" style="background:#4bb34b" onclick="submitWord()">ОТПРАВИТЬ</button>
-            <button style="background:#818c99" onclick="resetTurn()">СБРОС</button>
+    <div class="controls">
+        <div id="current-word">---</div>
+        <div class="btn-row">
+            <button style="background: #4bb34b;" onclick="sendWord()">ОТПРАВИТЬ</button>
+            <button style="background: #818c99;" onclick="reset()">СБРОС</button>
         </div>
     </div>
 
-    <div class="kb" id="keyboard"></div>
+    <div class="keyboard" id="kb"></div>
 </div>
 
 <script>
-    // 1. Данные
-    const alphabet = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
-    let game = { board: Array(5).fill().map(() => Array(5).fill('')), scores: [0, 0], turn: 0, players: [] };
-    "БАЛДА".split('').forEach((c, i) => game.board[2][i] = c);
+    const bridge = vkBridge.default;
+    let state = {
+        board: Array(25).fill(''),
+        scores: [0, 0],
+        turn: 0,
+        names: ["Игрок 1", "Игрок 2"]
+    };
+    "БАЛДА".split('').forEach((l, i) => state.board[10 + i] = l);
 
-    let localId = 'u' + Math.floor(Math.random() * 100000);
-    let myInfo = { id: localId, name: "Вы" };
-    let sel = [], placed = null;
+    let tempChar = null; // {idx, char}
+    let selected = [];   // [idx]
 
-    // 2. Старт ВК
-    vkBridge.send("VKWebAppInit").then(() => {
-        vkBridge.send("VKWebAppGetUserInfo").then(data => {
-            myInfo = { id: data.id, name: data.first_name };
-            initFirebase();
-        }).catch(() => initFirebase());
-    }).catch(() => initFirebase());
-
-    // 3. Старт Firebase
-    function initFirebase() {
+    async function init() {
+        await bridge.send("VKWebAppInit");
         try {
-            const config = {
-                apiKey: "AIzaSyDgj0aC-4zbgzMV2_F0AcJRNsST8iuK0mY",
-                authDomain: "balda-63646.firebaseapp.com",
-                databaseURL: "https://balda-63646-default-rtdb.firebaseio.com/",
-                projectId: "balda-63646"
-            };
-            firebase.initializeApp(config);
-            const ref = firebase.database().ref('game_v1');
-
-            ref.on('value', (s) => {
-                const d = s.val();
-                if (d) {
-                    game = d;
-                    if (game.players.length < 2 && !game.players.find(p => p.id === myInfo.id)) {
-                        game.players.push(myInfo);
-                        ref.update({ players: game.players });
-                    }
-                } else {
-                    ref.set({ ...game, players: [myInfo] });
-                }
-                render();
-            });
-        } catch(e) { render(); } // Если Firebase упал, играем локально
+            const user = await bridge.send("VKWebAppGetUserInfo");
+            state.names[0] = user.first_name;
+        } catch(e) {}
+        render();
     }
 
     function render() {
-        const g = document.getElementById('grid');
-        g.innerHTML = '';
-        const myIdx = game.players.findIndex(p => p.id === myInfo.id);
+        const grid = document.getElementById('grid');
+        grid.innerHTML = '';
+        state.board.forEach((letter, i) => {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            if (tempChar && tempChar.idx === i) {
+                cell.textContent = tempChar.char;
+                cell.classList.add('new');
+            } else {
+                cell.textContent = letter;
+            }
+            if (selected.includes(i)) cell.classList.add('selected');
+            cell.onclick = () => tapCell(i);
+            grid.appendChild(cell);
+        });
 
-        for (let r = 0; r < 5; r++) {
-            for (let c = 0; c < 5; c++) {
-                const cell = document.createElement('div');
-                cell.className = 'cell';
-                let char = (placed?.r === r && placed?.c === c) ? placed.char : game.board[r][c];
-                cell.textContent = char;
-                if (placed?.r === r && placed?.c === c) cell.classList.add('active-cell');
-                if (sel.find(s => s.r === r && s.c === c)) cell.classList.add('selected');
-                
-                cell.onclick = () => {
-                    if (game.turn !== myIdx && myIdx !== -1) return;
-                    if (!placed && game.board[r][c] === '') placed = { r, c, char: '' };
-                    else if (placed?.char) {
-                        const curChar = (placed.r === r && placed.c === c) ? placed.char : game.board[r][c];
-                        if (curChar && !sel.find(s => s.r === r && s.c === c)) sel.push({ r, c, char: curChar });
-                    }
-                    render();
-                };
-                g.appendChild(cell);
+        document.getElementById('n0').textContent = state.names[0];
+        document.getElementById('n1').textContent = state.names[1];
+        document.getElementById('s0').textContent = state.scores[0];
+        document.getElementById('s1').textContent = state.scores[1];
+        document.getElementById('p0').className = state.turn === 0 ? 'player active' : 'player';
+        document.getElementById('p1').className = state.turn === 1 ? 'player active' : 'player';
+        document.getElementById('current-word').textContent = selected.map(idx => (tempChar && tempChar.idx === idx ? tempChar.char : state.board[idx])).join('') || '---';
+    }
+
+    function tapCell(i) {
+        if (!tempChar && state.board[i] === '') {
+            tempChar = { idx: i, char: '' };
+        } else if (tempChar && tempChar.char !== '') {
+            if (!selected.includes(i) && (state.board[i] !== '' || (tempChar && tempChar.idx === i))) {
+                selected.push(i);
             }
         }
-        
-        // UI
-        document.getElementById('word-info').textContent = sel.map(s => s.char).join('') || (placed ? "Выберите буквы" : "Поставьте букву");
-        document.getElementById('p1-s').textContent = game.scores[0];
-        document.getElementById('p2-s').textContent = game.scores[1];
-        document.getElementById('p1-n').textContent = game.players[0]?.name || "Ожидание...";
-        document.getElementById('p2-n').textContent = game.players[1]?.name || "Игрок 2";
-        document.getElementById('p1-card').classList.toggle('active', game.turn === 0);
-        document.getElementById('p2-card').classList.toggle('active', game.turn === 1);
+        render();
     }
+
+    function sendWord() {
+        if (selected.length < 2 || !selected.includes(tempChar.idx)) return;
+        state.board[tempChar.idx] = tempChar.char;
+        state.scores[state.turn] += selected.length;
+        state.turn = 1 - state.turn;
+        tempChar = null; selected = [];
+        render();
+    }
+
+    function reset() { tempChar = null; selected = []; render(); }
+
+    const chars = "АБВГДЕЁЖЗИЙКЛМНОПРСТUФХЦЧШЩЪЫЬЭЮЯ";
+    chars.split('').forEach(c => {
+        const k = document.createElement('div');
+        k.className = 'key'; k.textContent = c;
+        k.onclick = () => { if (tempChar) { tempChar.char = c; render(); } };
+        document.getElementById('kb').appendChild(k);
+    });
+
+    init();
+</script>
+</body>
+</html>
 
     function submitWord() {
         if (sel.length < 2 || !sel.find(s => s.r === placed.r && s.c === placed.c)) return;
