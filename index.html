@@ -6,94 +6,172 @@
     <title>Балда Онлайн</title>
     <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
     <style>
-        :root { --vk-blue: #0077FF; --vk-green: #4BB34B; }
-        body { margin: 0; background: #ebedf0; font-family: -apple-system, sans-serif; display: flex; justify-content: center; }
-        #app { width: 100vw; max-width: 500px; background: white; min-height: 100vh; display: flex; flex-direction: column; }
-        header { padding: 15px; display: flex; justify-content: space-between; border-bottom: 1px solid #d7d8d9; align-items: center; }
-        #score { background: var(--vk-blue); color: white; padding: 4px 12px; border-radius: 10px; font-weight: bold; }
+        :root { --vk-blue: #0077FF; --vk-bg: #EBEDF0; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; background: var(--vk-bg); font-family: sans-serif; display: flex; justify-content: center; }
         
-        /* Сетка - Ключевое исправление */
-        #grid-container { padding: 15px; display: flex; justify-content: center; background: #f9f9f9; }
-        #grid { 
-            display: grid; 
-            grid-template-columns: repeat(5, 1fr); 
-            gap: 6px; 
-            width: 100%; 
-            max-width: 350px; 
-        }
-        .cell { 
-            aspect-ratio: 1; 
-            background: white; 
-            border: 2px solid #dfe1e5; 
-            border-radius: 8px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-size: 24px; 
-            font-weight: bold; 
-            box-shadow: 0 2px 0 #dfe1e5;
-            cursor: pointer;
-            user-select: none;
-        }
-        .cell.placed { background: #fff3cd; border-color: #fbc02d; }
-        .cell.selected { background: var(--vk-blue) !important; color: white !important; border-color: #0062d4; }
+        #app { width: 100vw; max-width: 500px; background: #fff; min-height: 100vh; display: flex; flex-direction: column; }
+        
+        /* Игроки (как на рисунке) */
+        .players-container { display: flex; justify-content: space-between; padding: 15px; background: #fff; border-bottom: 1px solid #d7d8d9; }
+        .player-card { text-align: center; width: 45%; padding: 10px; border: 2px solid #eee; border-radius: 12px; }
+        .player-card.active { border-color: var(--vk-blue); background: #f0f7ff; }
+        .score-val { font-size: 32px; font-weight: bold; display: block; margin: 5px 0; }
+        .player-name { font-size: 14px; color: #818c99; font-weight: bold; }
 
-        #controls { padding: 20px; text-align: center; }
-        #word-display { font-size: 24px; font-weight: 800; display: block; margin: 10px 0; min-height: 30px; }
-        .buttons-group { display: flex; gap: 10px; margin-top: 10px; }
-        button { flex: 1; height: 50px; border: none; border-radius: 10px; color: white; font-weight: bold; font-size: 16px; cursor: pointer; }
-        #submit-btn { background: var(--vk-green); }
-        #clear-btn { background: #818c99; }
-        .status-msg { margin-top: 15px; color: #818c99; font-size: 14px; }
+        /* Поле */
+        #grid-container { padding: 10px; display: flex; justify-content: center; flex-grow: 1; align-items: center; }
+        #grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; width: 100%; max-width: 320px; }
+        .cell { aspect-ratio: 1; border: 1px solid #dfe1e5; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; background: #fff; box-shadow: 0 1px 0 #dfe1e5; }
+        .cell.active-cell { border: 2px solid var(--vk-blue); background: #e1f0ff; }
+        .cell.selected { background: var(--vk-blue) !important; color: #fff !important; }
+
+        /* Клавиатура (внизу как на рисунке) */
+        .keyboard { padding: 10px; background: #f2f3f5; border-top: 1px solid #d7d8d9; display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+        .key { padding: 8px 0; background: #fff; border-radius: 4px; text-align: center; font-weight: bold; cursor: pointer; box-shadow: 0 1px 0 #c4c6cc; font-size: 14px; }
+        .key:active { background: #e2e5eb; }
+
+        /* Управление */
+        #controls { padding: 10px; text-align: center; }
+        .current-word { font-size: 20px; font-weight: 800; margin-bottom: 10px; min-height: 24px; color: var(--vk-blue); }
+        .btn-row { display: flex; gap: 8px; }
+        button { flex: 1; height: 44px; border: none; border-radius: 8px; font-weight: bold; color: #fff; font-size: 14px; }
+        .btn-send { background: #4bb34b; }
+        .btn-reset { background: #818c99; }
     </style>
 </head>
 <body>
-    <div id="app">
-        <header>
-            <div id="user-info">Загрузка...</div>
-            <div id="score">Счёт: 0</div>
-        </header>
 
-        <div id="grid-container">
-            <div id="grid"></div> </div>
-
-        <div id="controls">
-            Слово: <span id="word-display">---</span>
-            <div class="buttons-group">
-                <button id="submit-btn" onclick="submitWord()">ОТПРАВИТЬ</button>
-                <button id="clear-btn" onclick="resetTurn()">СБРОСИТЬ</button>
-            </div>
-            <div id="status-text" class="status-msg">Нажмите на пустую клетку</div>
+<div id="app">
+    <div class="players-container">
+        <div id="p1-card" class="player-card active">
+            <span class="player-name">ИГРОК 1</span>
+            <span id="p1-score" class="score-val">0</span>
+            <span style="font-size: 10px; color: #999;">ФИШКИ</span>
+        </div>
+        <div id="p2-card" class="player-card">
+            <span class="player-name">ИГРОК 2</span>
+            <span id="p2-score" class="score-val">0</span>
+            <span style="font-size: 10px; color: #999;">ФИШКИ</span>
         </div>
     </div>
 
-    <script>
-        const bridge = window.vkBridge ? window.vkBridge.default : null;
-        if (bridge) bridge.send("VKWebAppInit");
+    <div id="grid-container">
+        <div id="grid"></div>
+    </div>
 
-        const size = 5;
-        let score = 0;
-        let selectedCells = [];
-        let placedCell = null;
-        let gameState = 'PLACE';
-        let board = [
-            ['', '', '', '', ''],
-            ['', '', '', '', ''],
-            ['Б', 'А', 'Л', 'Д', 'А'],
-            ['', '', '', '', ''],
-            ['', '', '', '', '']
-        ];
+    <div id="controls">
+        <div id="word-display" class="current-word">---</div>
+        <div class="btn-row">
+            <button class="btn-send" onclick="submitWord()">ОТПРАВИТЬ</button>
+            <button class="btn-reset" onclick="resetTurn()">СБРОС</button>
+        </div>
+    </div>
 
-        function renderGrid() {
-            const grid = document.getElementById('grid');
-            grid.innerHTML = '';
-            for (let r = 0; r < size; r++) {
-                for (let c = 0; c < size; c++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'cell';
-                    
-                    let char = board[r][c];
-                    if (placedCell && placedCell.r === r && placedCell.c === c) {
-                        char = placedCell.char;
-                        cell
+    <div class="keyboard" id="keyboard"></div>
+</div>
+
+<script>
+    const alphabet = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
+    let board = Array(5).fill().map(() => Array(5).fill(''));
+    "БАЛДА".split('').forEach((char, i) => board[2][i] = char);
+
+    let scores = [0, 0];
+    let currentPlayer = 0; // 0 или 1
+    let selectedCells = [];
+    let placedCell = null;
+    let gameState = 'PLACE'; // PLACE или SELECT
+
+    function init() {
+        if (window.vkBridge) vkBridge.default.send("VKWebAppInit");
+        renderGrid();
+        renderKeyboard();
+    }
+
+    function renderGrid() {
+        const grid = document.getElementById('grid');
+        grid.innerHTML = '';
+        for (let r = 0; r < 5; r++) {
+            for (let c = 0; c < 5; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                if (placedCell && placedCell.r === r && placedCell.c === c) {
+                    cell.textContent = placedCell.char;
+                    cell.classList.add('active-cell');
+                } else {
+                    cell.textContent = board[r][c];
+                }
+                if (selectedCells.some(s => s.r === r && s.c === c)) cell.classList.add('selected');
+                cell.onclick = () => onCellClick(r, c);
+                grid.appendChild(cell);
+            }
+        }
+    }
+
+    function renderKeyboard() {
+        const kb = document.getElementById('keyboard');
+        alphabet.split('').forEach(char => {
+            const key = document.createElement('div');
+            key.className = 'key';
+            key.textContent = char;
+            key.onclick = () => onKeyClick(char);
+            kb.appendChild(key);
+        });
+    }
+
+    function onCellClick(r, c) {
+        if (gameState === 'PLACE' && board[r][c] === '') {
+            placedCell = { r, c, char: '' };
+            renderGrid();
+        } else if (gameState === 'SELECT') {
+            const char = (placedCell && placedCell.r === r && placedCell.c === c) ? placedCell.char : board[r][c];
+            if (char !== '' && !selectedCells.some(s => s.r === r && s.c === c)) {
+                selectedCells.push({ r, c, char });
+                document.getElementById('word-display').textContent = selectedCells.map(s => s.char).join('');
+                renderGrid();
+            }
+        }
+    }
+
+    function onKeyClick(char) {
+        if (gameState === 'PLACE' && placedCell) {
+            placedCell.char = char;
+            gameState = 'SELECT';
+            renderGrid();
+        }
+    }
+
+    function submitWord() {
+        const word = selectedCells.map(s => s.char).join('');
+        const hasNew = selectedCells.some(s => s.r === placedCell.r && s.c === placedCell.c);
+        
+        if (word.length < 2 || !hasNew) return alert("Ошибка в слове!");
+
+        board[placedCell.r][placedCell.c] = placedCell.char;
+        scores[currentPlayer] += word.length;
+        
+        // Смена игрока
+        currentPlayer = currentPlayer === 0 ? 1 : 0;
+        updateUI();
+        resetTurn();
+    }
+
+    function updateUI() {
+        document.getElementById('p1-score').textContent = scores[0];
+        document.getElementById('p2-score').textContent = scores[1];
+        document.getElementById('p1-card').classList.toggle('active', currentPlayer === 0);
+        document.getElementById('p2-card').classList.toggle('active', currentPlayer === 1);
+    }
+
+    function resetTurn() {
+        placedCell = null; selectedCells = []; gameState = 'PLACE';
+        document.getElementById('word-display').textContent = '---';
+        renderGrid();
+    }
+
+    init();
+</script>
+
+</body>
+</html>
 
