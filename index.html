@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Балда Онлайн - VK Games</title>
+    <title>Балда Онлайн</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
 </head>
@@ -19,11 +19,15 @@
         </div>
 
         <div id="controls">
-            <div id="current-word">Слово: <span>---</span></div>
-            <button id="submit-btn" onclick="submitWord()">ОТПРАВИТЬ</button>
-            <button id="clear-btn" onclick="clearSelection()">СБРОСИТЬ</button>
+            <div id="current-word">Слово: <span id="word-display">---</span></div>
+            <div class="buttons-group">
+                <button id="submit-btn" onclick="submitWord()">ОТПРАВИТЬ</button>
+                <button id="clear-btn" onclick="resetTurn()">СБРОСИТЬ</button>
+            </div>
+            <div id="status-text" class="status-msg">Поставьте букву на свободную клетку</div>
         </div>
     </div>
     <script src="game.js"></script>
 </body>
 </html>
+
