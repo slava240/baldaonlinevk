@@ -2,10 +2,50 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Балда Онлайн</title>
-    <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
+    <style>
+        :root { --vk-blue: #0077FF; --vk-green: #4BB34B; }
+        body { margin: 0; background: #ebedf0; font-family: -apple-system, sans-serif; display: flex; justify-content: center; }
+        #app { width: 100vw; max-width: 500px; background: white; min-height: 100vh; display: flex; flex-direction: column; }
+        header { padding: 15px; display: flex; justify-content: space-between; border-bottom: 1px solid #d7d8d9; align-items: center; }
+        #score { background: var(--vk-blue); color: white; padding: 4px 12px; border-radius: 10px; font-weight: bold; }
+        
+        /* Сетка - Ключевое исправление */
+        #grid-container { padding: 15px; display: flex; justify-content: center; background: #f9f9f9; }
+        #grid { 
+            display: grid; 
+            grid-template-columns: repeat(5, 1fr); 
+            gap: 6px; 
+            width: 100%; 
+            max-width: 350px; 
+        }
+        .cell { 
+            aspect-ratio: 1; 
+            background: white; 
+            border: 2px solid #dfe1e5; 
+            border-radius: 8px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 24px; 
+            font-weight: bold; 
+            box-shadow: 0 2px 0 #dfe1e5;
+            cursor: pointer;
+            user-select: none;
+        }
+        .cell.placed { background: #fff3cd; border-color: #fbc02d; }
+        .cell.selected { background: var(--vk-blue) !important; color: white !important; border-color: #0062d4; }
+
+        #controls { padding: 20px; text-align: center; }
+        #word-display { font-size: 24px; font-weight: 800; display: block; margin: 10px 0; min-height: 30px; }
+        .buttons-group { display: flex; gap: 10px; margin-top: 10px; }
+        button { flex: 1; height: 50px; border: none; border-radius: 10px; color: white; font-weight: bold; font-size: 16px; cursor: pointer; }
+        #submit-btn { background: var(--vk-green); }
+        #clear-btn { background: #818c99; }
+        .status-msg { margin-top: 15px; color: #818c99; font-size: 14px; }
+    </style>
 </head>
 <body>
     <div id="app">
@@ -15,19 +55,45 @@
         </header>
 
         <div id="grid-container">
-            <div id="grid" class="grid"></div>
-        </div>
+            <div id="grid"></div> </div>
 
         <div id="controls">
-            <div id="current-word">Слово: <span id="word-display">---</span></div>
+            Слово: <span id="word-display">---</span>
             <div class="buttons-group">
                 <button id="submit-btn" onclick="submitWord()">ОТПРАВИТЬ</button>
                 <button id="clear-btn" onclick="resetTurn()">СБРОСИТЬ</button>
             </div>
-            <div id="status-text" class="status-msg">Поставьте букву на свободную клетку</div>
+            <div id="status-text" class="status-msg">Нажмите на пустую клетку</div>
         </div>
     </div>
-    <script src="game.js"></script>
-</body>
-</html>
+
+    <script>
+        const bridge = window.vkBridge ? window.vkBridge.default : null;
+        if (bridge) bridge.send("VKWebAppInit");
+
+        const size = 5;
+        let score = 0;
+        let selectedCells = [];
+        let placedCell = null;
+        let gameState = 'PLACE';
+        let board = [
+            ['', '', '', '', ''],
+            ['', '', '', '', ''],
+            ['Б', 'А', 'Л', 'Д', 'А'],
+            ['', '', '', '', ''],
+            ['', '', '', '', '']
+        ];
+
+        function renderGrid() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    
+                    let char = board[r][c];
+                    if (placedCell && placedCell.r === r && placedCell.c === c) {
+                        char = placedCell.char;
+                        cell
 
